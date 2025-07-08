@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pomodoro Timer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    h1 {
+      font-size: 3rem;
+    }
+
+    #timer {
+      font-size: 6rem;
+      margin: 20px 0 10px 0;
+      transition: font-size 0.3s ease;
+    }
+
+    @media (min-width: 768px) {
+      #timer {
+        font-size: 12rem;
+      }
+
+      .footer {
+        position: fixed;
+        bottom: 15px;
+        right: 20px;
+        font-size: 14px;
+        color: #888;
+      }
+
+      .footer span {
+        font-family: 'Pacifico', cursive;
+        font-size: 16px;
+        color: #ff69b4;
+      }
+    }
+
+    .progress-container {
+      width: 80%;
+      height: 15px;
+      background-color: #111;
+      border: 1px solid #444;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background-color: white;
+      width: 100%;
+      transition: width 1s linear;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button {
+      background-color: #222;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background-color: #444;
+    }
+
+    .time-setter {
+      margin-bottom: 15px;
+    }
+
+    input[type="number"] {
+      width: 80px;
+      padding: 5px;
+      font-size: 1rem;
+      text-align: center;
+      border-radius: 5px;
+      border: none;
+    }
+
+    label {
+      margin-right: 10px;
+      font-size: 1.2rem;
+    }
+
+    .tracker {
+      margin-top: 30px;
+      font-size: 1.2rem;
+      background: #111;
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pomodoro Timer</h1>
+
+  <div class="time-setter">
+    <label for="customTime">Set Time (minutes):</label>
+    <input type="number" id="customTime" value="25" min="1" max="180" />
+  </div>
+
+  <div id="timer">25:00</div>
+
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="buttons">
+    <button id="startPauseBtn" onclick="toggleTimer()">Start</button>
+    <button onclick="resetTimer()">Reset</button>
+  </div>
+
+  <div class="tracker" id="trackerDisplay">Today’s Focus: 0 minutes</div>
+
+  <div class="footer">
+    Made by <span>Sahil</span>
+  </div>
+
+  <!-- ✅ Beep Sound -->
+  <audio id="beep">
+    <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAwF0AAIC7AAACABAAZGF0Yf///wAAAA==" type="audio/wav">
+  </audio>
+
+  <script>
+    let totalTime = 25 * 60;
+    let time = totalTime;
+    let timer;
+    let isRunning = false;
+    let isPaused = false;
+
+    const beep = document.getElementById("beep");
+
+    function updateDisplay() {
+      const minutes = String(Math.floor(time / 60)).padStart(2, '0');
+      const seconds = String(time % 60).padStart(2, '0');
+      document.getElementById('timer').innerText = `${minutes}:${seconds}`;
+      const progress = (time / totalTime) * 100;
+      document.getElementById('progressBar').style.width = `${progress}%`;
+    }
+
+    function toggleTimer() {
+      const button = document.getElementById("startPauseBtn");
+      const inputMinutes = parseInt(document.getElementById("customTime").value);
+
+      if (!isRunning) {
+        if (!isPaused) {
+          totalTime = inputMinutes * 60;
+          time = totalTime;
+        }
+        timer = setInterval(() => {
+          if (time > 0) {
+            time--;
+            updateDisplay();
+          } else {
+            clearInterval(timer);
+            logFocusTime(totalTime);
+            beep.play(); // ✅ Play sound here
+            alert("Time's up!");
+            button.innerText = "Start";
+            isRunning = false;
+            isPaused = false;
+            updateTrackerDisplay();
+          }
+        }, 1000);
+        isRunning = true;
+        isPaused = false;
+        button.innerText = "Pause";
+      } else {
+        clearInterval(timer);
+        isRunning = false;
+        isPaused = true;
+        button.innerText = "Resume";
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timer);
+      const inputMinutes = parseInt(document.getElementById("customTime").value);
+      totalTime = inputMinutes * 60;
+      time = totalTime;
+      updateDisplay();
+      isRunning = false;
+      isPaused = false;
+      document.getElementById("startPauseBtn").innerText = "Start";
+    }
+
+    function logFocusTime(seconds) {
+      const minutes = Math.round(seconds / 60);
+      const today = new Date().toISOString().split("T")[0];
+      let log = JSON.parse(localStorage.getItem("focusLog") || "{}");
+
+      if (log[today]) {
+        log[today] += minutes;
+      } else {
+        log[today] = minutes;
+      }
+
+      localStorage.setItem("focusLog", JSON.stringify(log));
+    }
+
+    function updateTrackerDisplay() {
+      const today = new Date().toISOString().split("T")[0];
+      let log = JSON.parse(localStorage.getItem("focusLog") || "{}");
+      const focusedToday = log[today] || 0;
+      document.getElementById("trackerDisplay").innerText = `Today’s Focus: ${focusedToday} minute(s)`;
+    }
+
+    updateDisplay();
+    updateTrackerDisplay();
+  </script>
+</body>
+</html>
